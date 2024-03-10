@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enter Database Information</title>
+    <style>
+        /* Add basic styling for improved design and clarity */
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input, textarea, select {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #4CAF50; /* Green */
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .centered-element {
+            max-width: 500px; /* Replace with your desired max width */
+            margin: 0 auto;
+          }
+    </style>
+</head>
+<body>
+    <h1 class='centered-element'>Enter Database Information</h1>
+    {% for d in data.fabric %}
+            <h1 >{{d}}</h1>
+       {%endfor%}
+    <form id="data-form" enctype="multipart/form-data" method="POST" class='centered-element'>
+        
+        {% csrf_token %}  <label for="images">Images (JPG, PNG, or GIF):</label>
+        <input type="file" id="images" name="images" multiple accept="image/jpeg,image/png,image/gif" required>
+
+        <label for="category">Category:</label>
+        <input type="text" id="category" name="category" maxlength="100" required>
+
+        <label for="role">Role:</label>
+        <input type="text" id="role" name="role" maxlength="100" required>
+
+        <label for="dataset">Dataset:</label>
+        <select id="dataset" name="dataset" required>
+            {% for dataset in datasets %}
+                <option value="{{ dataset.id }}">{{ dataset.name }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="fabric">Fabric:</label>
+        <select id="fabric" name="fabric" required>
+            {% for d in data.fabric %}
+            <option value="{{d.id}}">{{d}}</option>
+            
+            {%endfor%}
+            {% comment %} {% for fabric in data.fabrics%}
+                <option value="{{ fabric.id }}">{{ fabric.name }}</option>
+            {% endfor %} {% endcomment %}
+        </select>
+
+        <button type="submit">Submit</button>
+    </form>
+
+    <script>
+        // Add JavaScript validation and error handling (adjust as needed)
+
+        const form = document.getElementById('data-form');
+        form.addEventListener('submit', (event) => {
+            // ... perform basic validation (similar to previous response) ...
+
+            // Submit the form if validation passes
+            form.submit();
+        });
+    </script>
+</body>
+</html>

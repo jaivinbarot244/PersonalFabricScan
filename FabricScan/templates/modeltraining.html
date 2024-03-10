@@ -1,0 +1,44 @@
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="">
+    </head>
+    <body>
+        <h1> Welcome to the SIte</h1>
+     <form method= "POST" action="">
+        <label for="project">Choose a model:</label>
+            <select id="project" name="project">
+                    {% for d in data.fabric %}
+                        <option value="{{d.id}}">{{d}}</option>
+                        
+                    {%endfor%}
+            </select>
+
+        <label for="model">Choose a model:</label>
+            <select id="model" name="model">
+                    {% for d in data.basemodels %}
+                        <option value="{{d.id}}">{{d}}</option>
+                        
+                    {%endfor%}
+            </select>
+        <label for="epochs">Epochs:</label>
+        <input type="number" name ='epochs' id='epochs' value="10"/ > 
+        <label for="imgsz">Imgsz:</label>
+        <input type="number" name ='imgsz' id='imgsz' value="640"/ > 
+        <label for="name">Name:</label>
+        <input type="text" name ='modelname' id='name' / > 
+        <button type="submit" >Submit</button>
+        
+    </form> 
+{% comment %} 
+    {% for d in data %}
+        <p>{{d}}</p>
+    {%endfor%} {% endcomment %}
+
+    </body>
+</html>
