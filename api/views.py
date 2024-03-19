@@ -7,7 +7,7 @@ from cvat_sdk import make_client
 from cvat_sdk.core.proxies.tasks import ResourceType, Task
 import datumaro as dm
 from cvat_sdk.core.proxies.projects import Project
-from .models import (Basemodel,Fabric,Datasets,Images,YoloModel,Annotator,Tasks,PredictionData)
+from .models import (Basemodel,Fabric,Datasets,Images,YoloModel,Annotator,Tasks,PredictionData,Label,Yamlfile)
 import json
 import zipfile
 import os
@@ -32,6 +32,7 @@ import genicam.genapi as ge
 from pathlib import Path
 from harvesters.core import Harvester
 import yaml
+from playsound import playsound
 from tabulate import tabulate
 # Create your views here.
 width = int(4096)
@@ -86,6 +87,9 @@ def createTask(name, subset, projectId, data):
     )
     return task
 
+def playSoundThread():
+    playsound("./api/ding.mp3")
+
 def sysInfo(request):
     # Get RAM usage
     ram = psutil.virtual_memory()
@@ -130,19 +134,24 @@ def datasetConvertor(dataset: str, output: str):
     try:
         # get the test.json file from the dataset/annotations folder
         testPath = os.path.join(dataset, "annotations", "test.json")
-        testData = json.loads(open(testPath, "r").read())
+        with open(testPath, "r") as target:
+              testData = json.loads(target.read()) #target.write(f.read())
+        # testData = json.loads(open(testPath, "r").read())
     except:
         print("The test.json file is missing in the "+dataset+"/annotations folder")
     try:
         # get the train.json file from the dataset/annotations folder
         trainPath = os.path.join(dataset, "annotations", "train.json")
-        trainData = json.loads(open(trainPath, "r").read())
+        with open(trainPath, "r") as target:
+              trainData = json.loads(target.read())
     except:
         print("The train.json file is missing in the "+dataset+"/annotations folder")
     try:
         # get the val.json file from the dataset/annotations folder
         valPath = os.path.join(dataset, "annotations", "val.json")
-        valData = json.loads(open(valPath, "r").read())
+        with open(valPath, "r") as target:
+              valData = json.loads(target.read())
+        
     except:
         print("The val.json file is missing in the "+dataset+"/annotations folder")
     
@@ -308,12 +317,13 @@ def modelTraining(request):
             # Train the model using the specified parameters
             if resume == "true":
                 resume = True
-                model = YOLO(
+                baseModel = YOLO(
                     "projects/" + project + "/models/" + name + "/weights/best.pt"
                 )
                 name = model
             else:
                 baseModel = YOLO("baseModels/" + model)
+                
             baseModel.train(
                 data="projects/"+project+"/datasets/"+ datasetName +"/data.yaml",
                 # data=baseDir+"/projects/"+project+"/datasets/"+ datasetName+"/data.yaml",
@@ -323,6 +333,7 @@ def modelTraining(request):
                 name=name,
                 batch=-1,
                 task="segment",
+                device="cpu",
                 resume = resume
             )
             yolomodel = YoloModel()
@@ -529,6 +540,7 @@ def addNewFebric(request):
                         trainImages.append(tempPath)
                         tempPath = fabricName+"/datasets/"+datasetTemp.datasetName+"/train/images/" + uuidName+".jpg"
                         Images.objects.create(image=tempPath,category='train',dataset=datasetTemp,fabric=datasetTemp.fabric)
+
                     elif i>=trainCount and i<(testCount + trainCount):
                         tempPath = "./projects/"+fabricName+"/datasets/"+datasetTemp.datasetName+"/test/images/" + uuidName+".jpg"
                         os.rename(data["temp"][i],tempPath)
@@ -583,7 +595,6 @@ def addNewFebric(request):
 
 def getFebricDetails(request):
     try:
-       
         fabricName = request.GET["fabricName"]
         imagesPath = []
         fabric = Fabric.objects.filter(fabricName=fabricName).first()
@@ -1119,18 +1130,7 @@ def extractFolder(request):
                     #             with open(target_folder + "valid/images/" + file, "wb+") as target:
                     #                 target.write(f.read())
                     # #Labels
-                    # for file in os.listdir(temp_folder + extract_folder + "/yolo/labels/test/"):
-                    #     with open( temp_folder + extract_folder + "/yolo/labels/test/" + file, "rb",) as f:
-                    #         with open(target_folder + "test/labels/" + file, "wb+") as target:
-                    #                     target.write(f.read())
-                    # for file in os.listdir(temp_folder + extract_folder + "/yolo/labels/train/"):
-                    #     with open(temp_folder + extract_folder + "/yolo/labels/train/" + file,"rb",) as f:
-                    #         with open(target_folder + "train/labels/" + file, "wb+") as target:
-                    #             target.write(f.read())
-                    # for file in os.listdir(temp_folder + extract_folder + "/yolo/labels/val/"):
-                    #         with open(temp_folder + extract_folder + "/yolo/labels/val/" + file,"rb",) as f:
-                    #             with open(target_folder + "valid/labels/" + file, "wb+") as target:
-                    #                 target.write(f.read())
+                    
                     # baseDir = os.getcwd()
                     # with open(temp_folder + extract_folder + "/yolo/data.yaml","rb") as f:
                     #     tempdata = f.read()
@@ -1165,6 +1165,8 @@ def extractFolder(request):
                             os.rename(data["temp"][i],tempPath)
                             tempPath = projectName+"/datasets/"+newdataset.datasetName+"/train/images/" + uuidName+".jpg"
                             Images.objects.create(image=tempPath,category='train',dataset=newdataset,fabric=newdataset.fabric)
+
+                            
                            
                         elif i>=trainCount and i<(testCount + trainCount):
                             tempPath = "./projects/"+projectName+"/datasets/"+newdataset.datasetName+"/test/images/" + uuidName+".jpg"
@@ -1177,6 +1179,19 @@ def extractFolder(request):
                             tempPath = projectName+"/datasets/"+newdataset.datasetName+"/valid/images/" + uuidName+".jpg"
                             Images.objects.create(image=tempPath,category='valid',dataset=newdataset,fabric=newdataset.fabric)
                         data["temp"][i] = tempPath
+                    
+                    # for file in os.listdir(temp_folder + extract_folder + "/yolo/labels/test/"):
+                    #     with open( temp_folder + extract_folder + "/yolo/labels/test/" + file, "rb",) as f:
+                    #         label = Label.objects.create(label=(f.read()),fabric=newdataset.fabric,dataset=newdataset,image=image)           
+                    #         ()
+                    # for file in os.listdir(temp_folder + extract_folder + "/yolo/labels/train/"):
+                    #     with open(temp_folder + extract_folder + "/yolo/labels/train/" + file,"rb",) as f:
+                    #         with open(target_folder + "train/labels/" + file, "wb+") as target:
+                    #             target.write(f.read())
+                    # for file in os.listdir(temp_folder + extract_folder + "/yolo/labels/val/"):
+                    #         with open(temp_folder + extract_folder + "/yolo/labels/val/" + file,"rb",) as f:
+                    #             with open(target_folder + "valid/labels/" + file, "wb+") as target:
+                    #                 target.write(f.read())
                     # Return a success message if the extraction was successful
                     return HttpResponse(
                         json.dumps({"success": "File extracted successfully!"}),
@@ -1250,38 +1265,38 @@ def modelPrediction(request):
                         + "/"
                         + image.name
                     )
-                    imageCv = cv2.imread(path)
+                    # imageCv = cv2.imread(path)
                     for box in result.boxes:
                         boxCor = box.xyxy.tolist()[0]
                         centerX = boxCor[0] + ((boxCor[2] - boxCor[0]) / 2)
                         centerY = boxCor[1] + ((boxCor[3] - boxCor[1]) / 2)
-                        confident = box.conf.tolist()[0]
+                        confidence = box.conf.tolist()[0]
                         # plot the point on the image
-                        imageHeight, imageWidth, _ = imageCv.shape
-                        imageCv = cv2.circle(
-                            imageCv,
-                            (int(centerX), int(centerY)),
-                            10,
-                            (0, 255, 255),
-                            10,
-                        )
-                        imageCv = cv2.rectangle(
-                            imageCv,
-                            (int(boxCor[0]), int(boxCor[1])),
-                            (int(boxCor[2]), int(boxCor[3])),
-                            (0, 255, 255),
-                            1,
-                        )
-                        imageCv = cv2.putText(
-                            imageCv,
-                            str(confident)[:4],
-                            (int(boxCor[0]), int(boxCor[1]) - 5),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1,
-                            (0, 255, 255),
-                            2,
-                            cv2.LINE_AA,
-                        )
+                        # imageHeight, imageWidth, _ = imageCv.shape
+                        # imageCv = cv2.circle(
+                        #     imageCv,
+                        #     (int(centerX), int(centerY)),
+                        #     10,
+                        #     (0, 255, 255),
+                        #     10,
+                        # )
+                        # imageCv = cv2.rectangle(
+                        #     imageCv,
+                        #     (int(boxCor[0]), int(boxCor[1])),
+                        #     (int(boxCor[2]), int(boxCor[3])),
+                        #     (0, 255, 255),
+                        #     1,
+                        # )
+                        # imageCv = cv2.putText(
+                        #     imageCv,
+                        #     str(confidence)[:4],
+                        #     (int(boxCor[0]), int(boxCor[1]) - 5),
+                        #     cv2.FONT_HERSHEY_SIMPLEX,
+                        #     1,
+                        #     (0, 255, 255),
+                        #     2,
+                        #     cv2.LINE_AA,
+                        # )
                         
                         xy = box.xyxy.tolist()[0]
                         area_pixels = (xy[2] - xy[0]) * (xy[3] - xy[1])
@@ -1302,32 +1317,12 @@ def modelPrediction(request):
                         temp.append(centerY)
                         temp.append(area_inches)
                         temp.append(points)
+                        temp.append(confidence)
+                        
                         data.append(temp)
-                        print(data)
-                        newPredict = PredictionData()
-                        newPredict.fabric = Fabric.objects.filter(
-                            fabricName=project
-                        ).first()
-                        newPredict.centroid = str(centerX)[:4] + "," + str(centerY)[:4]
-                        newPredict.boundingBox = (
-                            str(boxCor[0])[:4]
-                            + ","
-                            + str(boxCor[1])[:4]
-                            + ","
-                            + str(boxCor[2])[:4]
-                            + ","
-                            + str(boxCor[3])[:4]
-                        )
-                        newPredict.imageRaw = (
-                            "projects/" + project + "/images/" + image.name
-                        )
-                        newPredict.imageAnnotated = path
-                        newPredict.confidence = confident
-                        newPredict.save()
-                    outputstr = tabulate(data, headers=["Name","centerX", "centerY","area_inches","points"],tablefmt='orgtbl')  
-                    print(outputstr) 
+                    outputstr = tabulate(data, headers=["Name","centerX", "centerY","area_inches","points","confidence"],tablefmt='orgtbl')  
                     # save the image
-                    cv2.imwrite(path, imageCv)
+                    # cv2.imwrite(path, imageCv)
                 return HttpResponse(
                     json.dumps(
                         {
@@ -1384,7 +1379,7 @@ def webcam(cameraIndex, project, modelName):
         except:
             pass
     filename = str(datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
-    fields = ['name', 'X', 'Y', 'area','point']
+    fields = ['name', 'X', 'Y', 'area','point','confidence']
     with open("projects/" + project + "/output/" + modelName + filename + ".csv", 'w') as csvfile:
         csvwriter = csv.DictWriter(csvfile, fieldnames = fields)
         csvwriter.writeheader()
@@ -1415,37 +1410,39 @@ def webcam(cameraIndex, project, modelName):
                 data = []
                 for result in results:
                     count = count + 1
+                    image_np = result.plot()
                     for box in result.boxes:
                         boxCor = box.xyxy.tolist()[0]
                         centerX = boxCor[0] + ((boxCor[2] - boxCor[0]) / 2)
                         centerY = boxCor[1] + ((boxCor[3] - boxCor[1]) / 2)
-                        confident = box.conf.tolist()[0]
+                        confidence = box.conf.tolist()[0]
                         # plot the point on the image
-                        imageHeight, imageWidth, _ = image_np.shape
-                        image_np = cv2.circle(
-                            image_np,
-                            (int(centerX), int(centerY)),
-                            10,
-                            (0, 255, 255),
-                            10,
-                        )
-                        image_np = cv2.rectangle(
-                            image_np,
-                            (int(boxCor[0]), int(boxCor[1])),
-                            (int(boxCor[2]), int(boxCor[3])),
-                            (0, 255, 255),
-                            1,
-                        )
-                        image_np = cv2.putText(
-                            image_np,
-                            str(confident)[:4],
-                            (int(boxCor[0]), int(boxCor[1]) + 5),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1,
-                            (0, 255, 255),
-                            2,
-                            cv2.LINE_AA,
-                        )
+                        # imageHeight, imageWidth, _ = image_np.shape
+                        # image_np = cv2.circle(
+                        #     image_np,
+                        #     (int(centerX), int(centerY)),
+                        #     10,
+                        #     (0, 255, 255),
+                        #     10,
+                        # )
+                        # image_np = cv2.rectangle(
+                        #     image_np,
+                        #     (int(boxCor[0]), int(boxCor[1])),
+                        #     (int(boxCor[2]), int(boxCor[3])),
+                        #     (0, 255, 255),
+                        #     1,
+                        # )
+                        # image_np = cv2.putText(
+                        #     image_np,
+                        #     str(confidence)[:4],
+                        #     (int(boxCor[0]), int(boxCor[1]) + 5),
+                        #     cv2.FONT_HERSHEY_SIMPLEX,
+                        #     1,
+                        #     (0, 255, 255),
+                        #     2,
+                        #     cv2.LINE_AA,
+                        # )
+                        
                         xy = box.xyxy.tolist()[0]
                         area_pixels = (xy[2] - xy[0]) * (xy[3] - xy[1])
                         pixel_to_inch = 0.01  # Replace with your actual conversion factor
@@ -1461,6 +1458,7 @@ def webcam(cameraIndex, project, modelName):
                             points = 4  
                         
                         
+                        
                         print("Area area_inches = ",area_inches)
                         print("Names = ",names[int(box.cls)])
                         print("Center points = ",centerX,centerY)
@@ -1468,13 +1466,21 @@ def webcam(cameraIndex, project, modelName):
                         print("id:= ",count)
                         temp = []
                         temp.append(names[int(box.cls)])
-                        temp.append(centerX)
+                        temp.append(int(centerX/81))
                         temp.append(centerY)
                         temp.append(area_inches)
                         temp.append(points)
+                        temp.append(confidence)
                         data.append(temp)
-            # filename = str(datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
-            # fields = ['name', 'X', 'Y', 'area','point']
+
+                    
+                    try:
+                        if len(result.boxes) > 0:
+                            t1 = threading.Thread(target=playSoundThread)
+                            t1.start()
+                    except:
+                        pass 
+
             with open("projects/" + project + "/output/" + modelName + filename+ ".csv", 'a') as csvfile:
                 csvwriter = csv.writer(csvfile)
                 for row in data:
@@ -1492,7 +1498,7 @@ def mainCam(cameraIndex, project, modelName):
     global predictPath, predictModel, predictFolder, caps, realtimePredict, h, cameraSetting
     global filename 
     filename = str(datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
-    fields = ['name', 'X', 'Y', 'area','point']
+    fields = ['name', 'X', 'Y', 'area','point','confidence']
     with open("projects/" + project + "/output/" + modelName + filename + ".csv", 'w') as csvfile:
         csvwriter = csv.DictWriter(csvfile, fieldnames = fields)
         csvwriter.writeheader()
@@ -1524,7 +1530,7 @@ def mainCam(cameraIndex, project, modelName):
     )
     caps["Camera" + str(cameraIndex)].start()
     filename = str(datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
-    fields = ['name', 'X', 'Y', 'area','point']
+    fields = ['name', 'X', 'Y', 'area','point','confidance']
     with open("projects/" + project + "/output/" + modelName + filename + ".csv", 'w') as csvfile:
         csvwriter = csv.DictWriter(csvfile, fieldnames = fields)
         csvwriter.writeheader()
@@ -1579,37 +1585,38 @@ def mainCam(cameraIndex, project, modelName):
                 )
                 data = []
                 for result in results:
+                    image_np = result.plot()
                     for box in result.boxes:
                         boxCor = box.xyxy.tolist()[0]
                         centerX = boxCor[0] + ((boxCor[2] - boxCor[0]) / 2)
                         centerY = boxCor[1] + ((boxCor[3] - boxCor[1]) / 2)
-                        confident = box.conf.tolist()[0]
+                        confidence = box.conf.tolist()[0]
                         # plot the point on the image
-                        imageHeight, imageWidth, _ = image_np.shape
-                        image_np = cv2.circle(
-                            image_np,
-                            (int(centerX), int(centerY)),
-                            10,
-                            (0, 255, 255),
-                            10,
-                        )
-                        image_np = cv2.rectangle(
-                            image_np,
-                            (int(boxCor[0]), int(boxCor[1])),
-                            (int(boxCor[2]), int(boxCor[3])),
-                            (0, 255, 255),
-                            1,
-                        )
-                        image_np = cv2.putText(
-                            image_np,
-                            str(confident)[:4],
-                            (int(boxCor[0]), int(boxCor[1]) + 5),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1,
-                            (0, 255, 255),
-                            2,
-                            cv2.LINE_AA,
-                        )
+                        # imageHeight, imageWidth, _ = image_np.shape
+                        # image_np = cv2.circle(
+                        #     image_np,
+                        #     (int(centerX), int(centerY)),
+                        #     10,
+                        #     (0, 255, 255),
+                        #     10,
+                        # )
+                        # image_np = cv2.rectangle(
+                        #     image_np,
+                        #     (int(boxCor[0]), int(boxCor[1])),
+                        #     (int(boxCor[2]), int(boxCor[3])),
+                        #     (0, 255, 255),
+                        #     1,
+                        # )
+                        # image_np = cv2.putText(
+                        #     image_np,
+                        #     str(confidence)[:4],
+                        #     (int(boxCor[0]), int(boxCor[1]) + 5),
+                        #     cv2.FONT_HERSHEY_SIMPLEX,
+                        #     1,
+                        #     (0, 255, 255),
+                        #     2,
+                        #     cv2.LINE_AA,
+                        # )
                         xy = box.xyxy.tolist()[0]
                         area_pixels = (xy[2] - xy[0]) * (xy[3] - xy[1])
                         pixel_to_inch = 0.01  # Replace with your actual conversion factor
@@ -1632,18 +1639,26 @@ def mainCam(cameraIndex, project, modelName):
                         
                         temp = []
                         temp.append(names[int(box.cls)])
-                        temp.append(centerX)
+                        temp.append(int(centerX/81))
                         temp.append(centerY)
                         temp.append(area_inches)
                         temp.append(points)
+                        temp.append(confidence)
                         data.append(temp)
+
+                    try:
+                        if len(result.boxes) > 0:
+                            t1 = threading.Thread(target=playSoundThread)
+                            t1.start()
+                    except:
+                        pass 
             # filename = str(datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
             # fields = ['name', 'X', 'Y', 'area','point']
             with open("projects/" + project + "/output/" + modelName + filename + ".csv", 'a') as csvfile:
                 csvwriter = csv.writer(csvfile)
                 for row in data:
                     csvwriter.writerow(row)
-                      
+                    
             # convert the image to base64
             _, img_encoded = cv2.imencode(".jpg", np.array(image_np))
             img_bytes = img_encoded.tobytes()

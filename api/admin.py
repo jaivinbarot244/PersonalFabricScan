@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import (Basemodel,Fabric,Datasets,Images,YoloModel,Annotator,Tasks,PredictionData)
+from .models import (Basemodel,Fabric,Datasets,Images,YoloModel,Annotator,Tasks,PredictionData,Label,Yamlfile)
 from import_export.admin import ExportActionMixin
 
 # Register your models here.
@@ -75,7 +75,14 @@ class PredictionDataAdmin(ExportActionMixin, admin.ModelAdmin):
     )
     search_fields = ["fabric", "time", "centroid", "boundingBox", "confidence"]
 
+class LabelsAdmin(ExportActionMixin, admin.ModelAdmin):
+    list_display = ("id", "fabric",'dataset')
+    search_fields = ["fabric",'dataset']
 
+
+class YamlfileAdmin(ExportActionMixin, admin.ModelAdmin):
+    list_display = ("id", "fabric", "dataset","yamlPath")
+    search_fields = ["fabric", "dataset","yamlPath"]
 
 admin.site.register(Basemodel, BasemodelAdmin)
 admin.site.register(Fabric, FabricAdmin)
@@ -85,3 +92,6 @@ admin.site.register(YoloModel, YoloModelAdmin)
 admin.site.register(Annotator, AnnotatorAdmin)
 admin.site.register(Tasks, TasksAdmin)
 admin.site.register(PredictionData, PredictionDataAdmin)
+admin.site.register(Label, LabelsAdmin)
+admin.site.register(Yamlfile, YamlfileAdmin)
+

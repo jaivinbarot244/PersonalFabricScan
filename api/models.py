@@ -128,3 +128,22 @@ class PredictionData(models.Model):
         return mark_safe(
             f'<img src="/static{self.imageAnnotated.replace("projects","")}" width = "50"/>'
         )
+
+
+
+class Label(models.Model):
+    fabric = models.ForeignKey(Fabric, on_delete=models.CASCADE)
+    dataset = models.ForeignKey(Datasets, on_delete=models.CASCADE)
+    image = models.ForeignKey(Images, on_delete=models.CASCADE)
+    label = models.CharField(max_length=500, default="", blank=True)
+
+    def __str__(self):
+        return self.label
+
+class Yamlfile(models.Model):
+    fabric = models.ForeignKey(Fabric, on_delete=models.CASCADE)
+    dataset = models.ForeignKey(Datasets, on_delete=models.CASCADE)
+    yamlPath = models.CharField(max_length=500, default="", blank=True)
+
+    def __str__(self):
+        return self.yaml

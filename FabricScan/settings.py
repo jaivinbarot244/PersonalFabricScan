@@ -26,7 +26,7 @@ SECRET_KEY = "ovsa7g^p^u!lyf1ox8ofu3b^1we$s4yh2(q+uj_gz1-^oh7o01"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost","*"]
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 
@@ -122,6 +122,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [
-    BASE_DIR / "projects",
     BASE_DIR / "static",
+    BASE_DIR / "projects",
 ]
+MEDIA_ROOT = os.path.join(BASE_DIR, 'projects')
+MEDIA_URL = '/media/'
